@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pdf-insight-local",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-11-04",
+  // Use the stable workers.dev endpoint until a custom route is selected.
+  "workers_dev": true,
+  "vars": {
+    "OPENAI_MODEL": "gpt-4.1-mini",
+    "ENVIRONMENT": "production",
+    "CORS_ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,https://24-igor.github.io",
+  },
+  "secrets": {
+    "required": ["OPENAI_API_KEY"],
+  },
+}
