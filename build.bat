@@ -3,8 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 rem PDF Insight release helper.
 rem This script never reads, prints, or creates OPENAI_API_KEY.
-rem Frontend publishing is intentionally opt-in; a normal Git push is the
-rem publish step only when the repository already has a GitHub Pages workflow.
+rem A successful Git push triggers the GitHub Pages workflow.
 
 cd /d "%~dp0"
 echo.
@@ -26,35 +25,9 @@ call npm run build || goto :failed
 echo.
 echo Verification passed. The production frontend is in dist\.
 
-set "DEPLOY_BACKEND=N"
-set /p "DEPLOY_BACKEND=Deploy the Cloudflare Worker now? (y/N): "
-if /I "!DEPLOY_BACKEND!"=="Y" (
-  echo.
-  echo === Cloudflare Worker deployment ===
-  echo Ensure OPENAI_API_KEY is already configured with:
-  echo   npx wrangler secret put OPENAI_API_KEY --name pdf-insight-local
-  set "CONFIRM_DEPLOY=N"
-  set /p "CONFIRM_DEPLOY=Continue with wrangler deploy? (y/N): "
-  if /I "!CONFIRM_DEPLOY!"=="Y" (
-    call npx wrangler deploy || goto :failed
-  ) else (
-    echo Worker deployment skipped.
-  )
-) else (
-  echo Worker deployment skipped.
-)
-
-set "PUBLISH_FRONTEND=N"
-if exist ".github\workflows" (
-  echo A GitHub Actions workflow directory exists. A normal push may publish the frontend.
-) else (
-  echo No GitHub Pages workflow was found. The frontend was built but not published.
-)
-set /p "PUBLISH_FRONTEND=Commit and push the verified changes? (y/N): "
-if /I not "!PUBLISH_FRONTEND!"=="Y" (
-  echo Commit and push skipped.
-  goto :success
-)
+echo.
+echo === Cloudflare Worker deployment ===
+call npx wrangler deploy || goto :failed
 
 echo.
 echo === Git commit and push ===
@@ -79,22 +52,12 @@ if not errorlevel 1 (
   goto :push
 )
 
-set "COMMIT_MESSAGE="
-set /p "COMMIT_MESSAGE=Commit message (required): "
-if not defined COMMIT_MESSAGE (
-  echo A commit message is required.
-  goto :failed
-)
+set "COMMIT_MESSAGE=%~1"
+if not defined COMMIT_MESSAGE set "COMMIT_MESSAGE=chore: release PDF Insight"
 git commit -m "!COMMIT_MESSAGE!" || goto :failed
 
 :push
-set "PUSH_NOW=N"
-set /p "PUSH_NOW=Push the commit to the configured remote? (y/N): "
-if /I "!PUSH_NOW!"=="Y" (
-  git push || goto :failed
-) else (
-  echo Push skipped. The commit remains local.
-)
+git push || goto :failed
 goto :success
 
 :missing_node
