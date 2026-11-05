@@ -159,10 +159,6 @@ export const ANALYSIS_JSON_SCHEMA = {
           evidence: { type: 'string', minLength: 8 },
           sourcePage: { type: 'integer', minimum: 1 },
           extractionMethod: { type: 'string', enum: ['pdfjs', 'ocr'] },
-          evidenceStatus: {
-            type: 'string',
-            enum: ['verified', 'unverified', 'derived'],
-          },
         },
       },
     },
