@@ -365,6 +365,107 @@ h1 span {
   color: #344f73;
   font-size: 14px;
 }
+.analysis-history {
+  margin: 22px 0 0;
+  padding: 16px;
+  border: 1px solid #e1e9f3;
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+.analysis-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.analysis-history-heading h2 {
+  margin: 4px 0 0;
+  color: #263f62;
+  font-size: 18px;
+}
+.analysis-history-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+.analysis-history-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e1e8f1;
+  border-radius: 8px;
+  color: #2d527f;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.analysis-history-item:hover,
+.analysis-history-item:focus-visible {
+  border-color: #8db4dd;
+  background: #f3f8ff;
+}
+.analysis-history-item span {
+  color: #7a8ba2;
+  font-size: 12px;
+}
+.analysis-modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(24 42 67 / 46%);
+}
+.analysis-modal {
+  width: min(760px, 100%);
+  max-height: min(86vh, 900px);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #dbe5f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(22 48 81 / 25%);
+}
+.analysis-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e7edf4;
+}
+.analysis-modal-heading h2 {
+  margin: 5px 0 4px;
+  color: #223f66;
+  font-size: 22px;
+}
+.analysis-modal-heading p {
+  margin: 0;
+  color: #788ba5;
+  font-size: 12px;
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #dbe5f0;
+  border-radius: 50%;
+  color: #4c6687;
+  background: #f7f9fc;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-close:hover,
+.modal-close:focus-visible {
+  color: #1d548f;
+  background: #edf5ff;
+}
+.modal-tools {
+  margin-top: 18px;
+}
 .key-points {
   display: grid;
   gap: 8px;
@@ -705,5 +806,12 @@ h1 span {
   }
   .site-footer {
     width: calc(100% - 32px);
+  }
+  .analysis-modal-backdrop {
+    padding: 10px;
+  }
+  .analysis-modal {
+    max-height: 92vh;
+    padding: 18px;
   }
 }

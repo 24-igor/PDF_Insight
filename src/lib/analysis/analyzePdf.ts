@@ -12,11 +12,11 @@ export function selectAnalysisPages(extracted: ExtractedPdf) {
   return scopedPages.slice(0, ANALYSIS_PAGE_LIMIT)
 }
 
-export async function analyzePdf(extracted: ExtractedPdf) {
+export function buildAnalyzeRequest(extracted: ExtractedPdf) {
   const pages = selectAnalysisPages(extracted)
   const request = AnalyzeRequestSchema.safeParse({
     fileName: extracted.fileName,
-    pageCount: pages.length,
+    pageCount: extracted.pageCount,
     pages: pages.map((page) => ({
       pageNumber: page.pageNumber,
       text: page.ocrText ?? page.pdfText,
@@ -27,17 +27,22 @@ export async function analyzePdf(extracted: ExtractedPdf) {
   if (!request.success) {
     throw new Error('Dokument zawiera zbyt dużo tekstu do analizy.')
   }
+  return request.data
+}
+
+export async function analyzePdf(extracted: ExtractedPdf) {
+  const request = buildAnalyzeRequest(extracted)
 
   let response: Response
   try {
     response = await fetch(`${API_URL.replace(/\/$/, '')}/analyze`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(request.data),
+      body: JSON.stringify(request),
     })
   } catch {
     throw new Error(
-      'Nie można połączyć się z lokalnym Workerem. Uruchom npm run worker:dev.',
+      'Nie można połączyć się z Workerem analizy. Sprawdź jego dostępność.',
     )
   }
 

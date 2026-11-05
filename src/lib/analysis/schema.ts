@@ -1,5 +1,14 @@
 import { z } from 'zod'
 
+export function countSentences(value: string): number {
+  return (value.match(/[^.!?]+[.!?]+(?=\s|$)/g) ?? []).length
+}
+
+export function isConciseSummary(value: string): boolean {
+  const count = countSentences(value)
+  return count >= 3 && count <= 5 && value.length <= 1200
+}
+
 export const AnalyzeRequestSchema = z.object({
   fileName: z.string().min(1).max(255),
   pageCount: z.number().int().min(1).max(500),
@@ -25,8 +34,10 @@ export const AnalysisResultValidator = z.object({
     title: z.string().nullable(),
     date: z.iso.date().nullable(),
   }),
-  summary: z.string(),
-  keyPoints: z.array(z.string()).min(3).max(7),
+  summary: z.string().refine(isConciseSummary, {
+    message: 'Summary must contain 3–5 sentences and be concise.',
+  }),
+  keyPoints: z.array(z.string().min(1).max(280)).min(3).max(7),
   entities: z.object({
     organizations: z.array(z.string()),
     people: z.array(z.string()),
@@ -39,6 +50,7 @@ export const AnalysisResultValidator = z.object({
       evidence: z.string().min(8),
       sourcePage: z.number().int().min(1),
       extractionMethod: z.enum(['pdfjs', 'ocr']),
+      evidenceStatus: z.enum(['verified', 'unverified']).optional(),
     }),
   ),
   dates: z.array(
@@ -110,12 +122,12 @@ export const ANALYSIS_JSON_SCHEMA = {
         },
       },
     },
-    summary: { type: 'string' },
+    summary: { type: 'string', minLength: 40, maxLength: 1200 },
     keyPoints: {
       type: 'array',
       minItems: 3,
       maxItems: 7,
-      items: { type: 'string' },
+      items: { type: 'string', minLength: 1, maxLength: 280 },
     },
     entities: {
       type: 'object',

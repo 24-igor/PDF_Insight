@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { selectAnalysisPages } from './analyzePdf'
+import { buildAnalyzeRequest, selectAnalysisPages } from './analyzePdf'
 import { analysisLimitMessage } from './config'
 import type { ExtractedPdf } from '../pdf/types'
 
@@ -48,6 +48,12 @@ describe('temporary analysis page limit', () => {
     expect(
       selectAnalysisPages(makeExtracted(12)).map((page) => page.pageNumber),
     ).toEqual([1, 2, 3, 4])
+  })
+
+  it('preserves the original document page count in the request', () => {
+    const request = buildAnalyzeRequest(makeExtracted(12))
+    expect(request.pageCount).toBe(12)
+    expect(request.pages.map((page) => page.pageNumber)).toEqual([1, 2, 3, 4])
   })
 
   it('provides the UI disclosure for documents over the limit', () => {

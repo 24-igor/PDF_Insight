@@ -19,6 +19,8 @@ call npm run worker:typecheck || goto :failed
 call npm test -- --run || goto :failed
 call npm run lint || goto :failed
 call npm run format:check || goto :failed
+set "VITE_API_URL=https://pdf-insight-local.ihub24.workers.dev"
+set "VITE_BASE_PATH=/PDF_Insight/"
 call npm run build || goto :failed
 
 echo.

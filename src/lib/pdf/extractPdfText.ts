@@ -34,6 +34,44 @@ export function getPagesToProcess(totalPages: number): number {
   return Math.min(totalPages, ANALYSIS_PAGE_LIMIT)
 }
 
+const PAGE_VISIBILITY_MARGIN = 0.5
+
+/**
+ * PDF.js text content does not expose paint opacity or clipping state. This
+ * conservative geometry check excludes only text that cannot have painted on
+ * the page; ambiguous text remains available and can still trigger OCR.
+ */
+export function isTextItemVisiblyRendered(
+  item: Pick<RawPdfTextItem, 'str' | 'transform' | 'width' | 'height'>,
+  pageWidth: number,
+  pageHeight: number,
+): boolean {
+  if (!item.str.trim() || item.width <= 0 || item.height <= 0) return false
+  const [a = 0, b = 0, c = 0, d = 0, x = Number.NaN, y = Number.NaN] =
+    item.transform
+  if (![a, b, c, d, x, y].every(Number.isFinite)) return false
+  if (Math.hypot(a, b) < 0.001 || Math.hypot(c, d) < 0.001) return false
+
+  const right = x + Math.abs(item.width)
+  const top = y + Math.abs(item.height)
+  return (
+    right >= -PAGE_VISIBILITY_MARGIN &&
+    x <= pageWidth + PAGE_VISIBILITY_MARGIN &&
+    top >= -PAGE_VISIBILITY_MARGIN &&
+    y <= pageHeight + PAGE_VISIBILITY_MARGIN
+  )
+}
+
+export function filterVisibleTextItems(
+  items: RawPdfTextItem[],
+  pageWidth: number,
+  pageHeight: number,
+): RawPdfTextItem[] {
+  return items.filter((item) =>
+    isTextItemVisiblyRendered(item, pageWidth, pageHeight),
+  )
+}
+
 export function buildPageDiagnostics(
   rawItems: RawPdfTextItem[],
   pageNumber: number,
@@ -362,12 +400,17 @@ export async function extractPdfText(
             ]
           : [],
       )
-      const legacyPdfText = content.items
-        .map((item) => ('str' in item ? item.str : ''))
+      const viewport = page.getViewport({ scale: 1 })
+      const visibleItems = filterVisibleTextItems(
+        rawItems,
+        viewport.width,
+        viewport.height,
+      )
+      const legacyPdfText = visibleItems
+        .map((item) => item.str)
         .join(' ')
         .replace(/\s+/g, ' ')
         .trim()
-      const viewport = page.getViewport({ scale: 1 })
       let operators: { fnArray: number[]; argsArray: unknown[][] } = {
         fnArray: [],
         argsArray: [],
@@ -384,7 +427,7 @@ export async function extractPdfText(
         viewport.height,
         legacyPdfText,
         reconstructPdfText(
-          rawItems,
+          visibleItems,
           viewport.width,
           viewport.height,
           legacyPdfText,

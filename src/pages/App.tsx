@@ -7,7 +7,10 @@ import {
   ANALYSIS_SCOPE,
   analysisLimitMessage,
 } from '../lib/analysis/config'
-import type { AnalysisResult } from '../lib/analysis/schema'
+import {
+  AnalysisResultValidator,
+  type AnalysisResult,
+} from '../lib/analysis/schema'
 import { extractPdfText } from '../lib/pdf/extractPdfText'
 import { createStructuredDocument } from '../lib/pdf/structuredDocument'
 import type {
@@ -41,6 +44,52 @@ function injectionEvidence(page: ExtractedPdf['pages'][number]): string | null {
   return match?.[0].replace(/\s+/g, ' ').trim() ?? null
 }
 
+type AnalysisHistoryEntry = {
+  id: string
+  createdAt: string
+  analysis: AnalysisResult
+}
+
+const ANALYSIS_HISTORY_KEY = 'pdf-insight-analysis-history'
+const MAX_HISTORY_ENTRIES = 10
+
+function readAnalysisHistory(): AnalysisHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(ANALYSIS_HISTORY_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.flatMap((entry) => {
+      if (!entry || typeof entry !== 'object') return []
+      const candidate = entry as Partial<AnalysisHistoryEntry>
+      const analysis = AnalysisResultValidator.safeParse(candidate.analysis)
+      return typeof candidate.id === 'string' &&
+        typeof candidate.createdAt === 'string' &&
+        analysis.success
+        ? [
+            {
+              id: candidate.id,
+              createdAt: candidate.createdAt,
+              analysis: analysis.data,
+            },
+          ]
+        : []
+    })
+  } catch {
+    return []
+  }
+}
+
+function historyLabel(entry: AnalysisHistoryEntry): string {
+  const date = new Date(entry.createdAt)
+  return Number.isNaN(date.valueOf())
+    ? entry.createdAt
+    : date.toLocaleString('pl-PL', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      })
+}
+
 function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -50,6 +99,11 @@ function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<ExtractedPdf | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [analysisPopup, setAnalysisPopup] = useState<AnalysisResult | null>(
+    null,
+  )
+  const [analysisHistory, setAnalysisHistory] =
+    useState<AnalysisHistoryEntry[]>(readAnalysisHistory)
   const [highlightedPage, setHighlightedPage] = useState<number | null>(null)
   const [isDocumentExpanded, setIsDocumentExpanded] = useState(false)
   const [diagnosticPageNumber, setDiagnosticPageNumber] = useState(1)
@@ -109,7 +163,19 @@ function HomePage() {
     setAnalysis(null)
     setIsAnalyzing(true)
     try {
-      setAnalysis(await analyzePdf(result))
+      const nextAnalysis = await analyzePdf(result)
+      setAnalysis(nextAnalysis)
+      setAnalysisPopup(nextAnalysis)
+      const nextHistory = [
+        {
+          id: `${Date.now()}-${nextAnalysis.document.fileName}`,
+          createdAt: new Date().toISOString(),
+          analysis: nextAnalysis,
+        },
+        ...analysisHistory,
+      ].slice(0, MAX_HISTORY_ENTRIES)
+      setAnalysisHistory(nextHistory)
+      localStorage.setItem(ANALYSIS_HISTORY_KEY, JSON.stringify(nextHistory))
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -125,10 +191,10 @@ function HomePage() {
     fileInputRef.current?.click()
   }
 
-  function downloadAnalysisJson() {
-    if (!analysis) return
-    const baseName = analysis.document.fileName.replace(/\.pdf$/i, '')
-    const blob = new Blob([JSON.stringify(analysis, null, 2)], {
+  function downloadAnalysisJson(analysisToDownload = analysis) {
+    if (!analysisToDownload) return
+    const baseName = analysisToDownload.document.fileName.replace(/\.pdf$/i, '')
+    const blob = new Blob([JSON.stringify(analysisToDownload, null, 2)], {
       type: 'application/json',
     })
     const url = URL.createObjectURL(blob)
@@ -137,6 +203,10 @@ function HomePage() {
     link.download = `${baseName || 'pdf-insight-analysis'}.json`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  function openHistoryEntry(entry: AnalysisHistoryEntry) {
+    setAnalysisPopup(entry.analysis)
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -176,6 +246,33 @@ function HomePage() {
         pokażemy tekst gotowy do kolejnego etapu.
       </p>
 
+      {analysisHistory.length > 0 && (
+        <section className="analysis-history" aria-labelledby="history-title">
+          <div className="analysis-history-heading">
+            <div>
+              <span className="result-kicker">LOKALNA HISTORIA</span>
+              <h2 id="history-title">Poprzednie analizy</h2>
+            </div>
+            <span className="document-type">{analysisHistory.length}</span>
+          </div>
+          <div className="analysis-history-list">
+            {analysisHistory.map((entry) => (
+              <button
+                className="analysis-history-item"
+                key={entry.id}
+                type="button"
+                onClick={() => openHistoryEntry(entry)}
+              >
+                <strong>{entry.analysis.document.fileName}</strong>
+                <span>
+                  {historyLabel(entry)} · {entry.analysis.document.type}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section
         className={`upload-panel${isDragging ? ' is-dragging' : ''}${isLoading || isAnalyzing ? ' is-loading' : ''}`}
         aria-labelledby="upload-title"
@@ -195,7 +292,7 @@ function HomePage() {
             </h2>
             <p>
               {isAnalyzing
-                ? 'Wysyłamy wyodrębniony tekst do lokalnego Workera.'
+                ? 'Wysyłamy wyodrębniony tekst do Workera analizy.'
                 : progressMessage ||
                   'Strony tekstowe i skany są czytane lokalnie.'}
             </p>
@@ -387,10 +484,19 @@ function HomePage() {
               >
                 {analysis ? 'Uruchom analizę ponownie' : 'Analizuj dokument'}
               </button>
+              {analysis && (
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setAnalysisPopup(analysis)}
+                >
+                  Otwórz wynik w oknie
+                </button>
+              )}
             </div>
             <p className="analysis-privacy-note">
               Po kliknięciu tekst analizowanej strony zostanie wysłany do OpenAI
-              przez lokalny Worker. Oryginalny plik PDF pozostaje w
+              przez bezpieczny Worker. Oryginalny plik PDF pozostaje w
               przeglądarce.
             </p>
 
@@ -531,7 +637,7 @@ function HomePage() {
                   <button
                     className="secondary-button"
                     type="button"
-                    onClick={downloadAnalysisJson}
+                    onClick={() => downloadAnalysisJson()}
                   >
                     Pobierz JSON
                   </button>
@@ -710,6 +816,66 @@ function HomePage() {
                 })()}
               </details>
             )}
+
+            {analysisPopup && (
+              <div
+                className="analysis-modal-backdrop"
+                role="presentation"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget)
+                    setAnalysisPopup(null)
+                }}
+              >
+                <section
+                  className="analysis-modal"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="analysis-modal-title"
+                >
+                  <div className="analysis-modal-heading">
+                    <div>
+                      <span className="result-kicker">WYNIK ANALIZY</span>
+                      <h2 id="analysis-modal-title">
+                        {analysisPopup.document.title ||
+                          analysisPopup.document.fileName}
+                      </h2>
+                      <p>
+                        {analysisPopup.document.fileName} ·{' '}
+                        {analysisPopup.document.type}
+                      </p>
+                    </div>
+                    <button
+                      className="modal-close"
+                      type="button"
+                      aria-label="Zamknij wynik analizy"
+                      onClick={() => setAnalysisPopup(null)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="analysis-summary">{analysisPopup.summary}</p>
+                  <h3>Najważniejsze ustalenia</h3>
+                  <ul className="key-points">
+                    {analysisPopup.keyPoints.map((point) => (
+                      <li key={point}>{point}</li>
+                    ))}
+                  </ul>
+                  <div className="json-result-tools modal-tools">
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => downloadAnalysisJson(analysisPopup)}
+                    >
+                      Pobierz JSON
+                    </button>
+                    <details className="json-preview">
+                      <summary>Podgląd JSON</summary>
+                      <pre>{JSON.stringify(analysisPopup, null, 2)}</pre>
+                    </details>
+                  </div>
+                </section>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -756,7 +922,7 @@ function HomePage() {
       {!result && !isLoading && (
         <p className="privacy-note">
           PDF jest odczytywany lokalnie. Po wybraniu analizy sam tekst stron
-          trafia do OpenAI przez lokalny Worker; oryginalny plik PDF nie jest
+          trafia do OpenAI przez bezpieczny Worker; oryginalny plik PDF nie jest
           wysyłany.
         </p>
       )}
