@@ -16,7 +16,8 @@ export function buildAnalyzeRequest(extracted: ExtractedPdf) {
   const pages = selectAnalysisPages(extracted)
   const request = AnalyzeRequestSchema.safeParse({
     fileName: extracted.fileName,
-    pageCount: extracted.pageCount,
+    pageCount: pages.length,
+    documentPageCount: extracted.pageCount,
     pages: pages.map((page) => ({
       pageNumber: page.pageNumber,
       text: page.ocrText ?? page.pdfText,

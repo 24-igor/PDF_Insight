@@ -12,6 +12,7 @@ export function isConciseSummary(value: string): boolean {
 export const AnalyzeRequestSchema = z.object({
   fileName: z.string().min(1).max(255),
   pageCount: z.number().int().min(1).max(500),
+  documentPageCount: z.number().int().min(1).max(500).optional(),
   pages: z
     .array(
       z.object({

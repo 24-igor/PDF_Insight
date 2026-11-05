@@ -533,12 +533,24 @@ h1 span {
   font-size: 13px;
 }
 .page-warning-danger {
-  position: sticky;
-  top: 8px;
-  z-index: 5;
   padding: 9px 12px;
   border-color: #efb5b5;
   background: #fff1f1;
+}
+.page-warning-collapsible {
+  display: block;
+}
+.page-warning-collapsible > summary {
+  color: #74551f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.page-warning-collapsible[open] > summary {
+  margin-bottom: 8px;
+}
+.page-warning-danger > summary {
+  color: #9d3732;
 }
 .page-warning-danger p {
   color: #9d3732;

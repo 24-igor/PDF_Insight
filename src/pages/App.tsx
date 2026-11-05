@@ -381,9 +381,9 @@ function HomePage() {
             {result.needsReviewPageNumbers.filter(
               (pageNumber) => !result.injectionPageNumbers.includes(pageNumber),
             ).length > 0 && (
-              <div className="page-warning" role="status">
+              <details className="page-warning page-warning-collapsible">
+                <summary>Strony wymagające weryfikacji odczytu</summary>
                 <p>
-                  Strony wymagające weryfikacji odczytu:{' '}
                   {result.needsReviewPageNumbers
                     .filter(
                       (pageNumber) =>
@@ -423,12 +423,20 @@ function HomePage() {
                       )
                     })}
                 </p>
-              </div>
+              </details>
             )}
             {result.injectionPageNumbers.length > 0 && (
-              <div className="page-warning page-warning-danger" role="alert">
+              <details
+                className="page-warning page-warning-danger page-warning-collapsible"
+                role="alert"
+              >
+                <summary>
+                  Wykryto tekst przypominający instrukcje dla AI na stronie
+                  {result.injectionPageNumbers.length > 1 ? 'ach' : ''}{' '}
+                  {result.injectionPageNumbers.join(', ')}
+                </summary>
                 <p>
-                  Wykryto tekst przypominający instrukcje dla AI na stronach:{' '}
+                  Dokładna lokalizacja:{' '}
                   {result.injectionPageNumbers.map((n) => (
                     <button
                       className="page-jump"
@@ -455,7 +463,7 @@ function HomePage() {
                     </blockquote>
                   ) : null
                 })}
-              </div>
+              </details>
             )}
             {result.labelMismatchPageNumbers.length > 0 && (
               <div className="page-warning" role="status">

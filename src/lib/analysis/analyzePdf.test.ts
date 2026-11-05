@@ -52,7 +52,8 @@ describe('temporary analysis page limit', () => {
 
   it('preserves the original document page count in the request', () => {
     const request = buildAnalyzeRequest(makeExtracted(12))
-    expect(request.pageCount).toBe(12)
+    expect(request.pageCount).toBe(4)
+    expect(request.documentPageCount).toBe(12)
     expect(request.pages.map((page) => page.pageNumber)).toEqual([1, 2, 3, 4])
   })
 

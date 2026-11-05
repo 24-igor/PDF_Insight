@@ -119,6 +119,8 @@ async function requestAnalysis(
         `\n${page.text}`,
     )
     .join('\n\n')
+  const documentPageCount =
+    requestData.documentPageCount ?? requestData.pageCount
   const instructions = retry
     ? `${SYSTEM_INSTRUCTIONS}\nPoprzedni wynik nie przeszedł walidacji. Wygeneruj poprawny wynik od nowa.`
     : SYSTEM_INSTRUCTIONS
@@ -134,7 +136,7 @@ async function requestAnalysis(
       body: JSON.stringify({
         model: env.OPENAI_MODEL || 'gpt-4.1-mini',
         instructions,
-        input: `Nazwa pliku: ${requestData.fileName}\nLiczba stron: ${requestData.pageCount}\n\nBEGIN_UNTRUSTED_DOCUMENT\n${inputText}\nEND_UNTRUSTED_DOCUMENT`,
+        input: `Nazwa pliku: ${requestData.fileName}\nLiczba stron dokumentu: ${documentPageCount}\nLiczba stron przekazanych do analizy: ${requestData.pageCount}\n\nBEGIN_UNTRUSTED_DOCUMENT\n${inputText}\nEND_UNTRUSTED_DOCUMENT`,
         text: {
           format: {
             type: 'json_schema',
@@ -271,7 +273,7 @@ async function requestAnalysis(
     !result.success ||
     (result.success &&
       (result.data.document.fileName !== requestData.fileName ||
-        result.data.document.pages !== requestData.pageCount))
+        result.data.document.pages !== documentPageCount))
   ) {
     console.warn(
       '[pdf-insight] Structured output failed schema or metadata validation.',
