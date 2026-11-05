@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent } from 'react'
+import type { ChangeEvent, DragEvent, ReactNode } from 'react'
 import { Link, Route, Routes } from 'react-router-dom'
 import { analyzePdf } from '../lib/analysis/analyzePdf'
 import {
@@ -44,6 +44,20 @@ function injectionEvidence(page: ExtractedPdf['pages'][number]): string | null {
   return match?.[0].replace(/\s+/g, ' ').trim() ?? null
 }
 
+function renderDocumentText(text: string): ReactNode[] {
+  const injectionPattern =
+    /(INSTRUKCJA\s+DLA\s+SYSTEMU\s+AI:[^\n]*(?:\n[^\n]*){0,3})/i
+  return text.split(injectionPattern).map((part, index) =>
+    injectionPattern.test(part) ? (
+      <mark className="document-error-highlight" key={`document-part-${index}`}>
+        {part}
+      </mark>
+    ) : (
+      part
+    ),
+  )
+}
+
 type AnalysisHistoryEntry = {
   id: string
   createdAt: string
@@ -52,6 +66,10 @@ type AnalysisHistoryEntry = {
 
 const ANALYSIS_HISTORY_KEY = 'pdf-insight-analysis-history'
 const MAX_HISTORY_ENTRIES = 10
+
+function diagnosticsEnabled(): boolean {
+  return false
+}
 
 function readAnalysisHistory(): AnalysisHistoryEntry[] {
   try {
@@ -324,21 +342,22 @@ function HomePage() {
               </div>
             </div>
 
-            {result.pageCount > ANALYSIS_PAGE_LIMIT && (
-              <div className="page-warning" role="status">
-                <span className="warning-icon" aria-hidden="true">
-                  i
-                </span>
-                <div className="page-warning-content">
-                  <p>
-                    {analysisLimitMessage(
-                      result.pageCount,
-                      result.analyzedPageCount ?? result.pages.length,
-                    )}
-                  </p>
+            {ANALYSIS_PAGE_LIMIT !== null &&
+              result.pageCount > ANALYSIS_PAGE_LIMIT && (
+                <div className="page-warning" role="status">
+                  <span className="warning-icon" aria-hidden="true">
+                    i
+                  </span>
+                  <div className="page-warning-content">
+                    <p>
+                      {analysisLimitMessage(
+                        result.pageCount,
+                        result.analyzedPageCount ?? result.pages.length,
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {!result.isComplete ? (
               <div className="page-warning" role="status">
@@ -429,6 +448,12 @@ function HomePage() {
               <details
                 className="page-warning page-warning-danger page-warning-collapsible"
                 role="alert"
+                onToggle={(event) => {
+                  if (event.currentTarget.open) {
+                    const firstInjectionPage = result.injectionPageNumbers[0]
+                    if (firstInjectionPage) goToPage(firstInjectionPage)
+                  }
+                }}
               >
                 <summary>
                   Wykryto tekst przypominający instrukcje dla AI na stronie
@@ -531,7 +556,9 @@ function HomePage() {
                     <h3>Strona {page.pageNumber}</h3>
                     <pre className="markdown-document-text">
                       {page.markdownText
-                        ? page.markdownText.replace(/\n{2,}/g, '\n').trim()
+                        ? renderDocumentText(
+                            page.markdownText.replace(/\n{2,}/g, '\n').trim(),
+                          )
                         : 'Brak odczytanego tekstu.'}
                     </pre>
                   </section>
@@ -559,7 +586,7 @@ function HomePage() {
                   Zakres analizy:{' '}
                   {ANALYSIS_SCOPE === 'first-page'
                     ? 'pierwsza strona'
-                    : `pierwsze ${ANALYSIS_PAGE_LIMIT} strony (tymczasowy limit)`}
+                    : 'cały odczytany dokument'}
                 </p>
                 <p className="analysis-summary">{analysis.summary}</p>
 
@@ -570,46 +597,53 @@ function HomePage() {
                   ))}
                 </ul>
 
-                <h3>Kwoty i źródła</h3>
-                <div className="fact-list">
-                  {analysis.amounts.map((amount, index) => (
-                    <article
-                      className="fact-card"
-                      key={`${amount.value}-${amount.context}-${index}`}
-                    >
-                      <strong>
-                        {amount.value.toLocaleString('pl-PL')} {amount.currency}
-                      </strong>
-                      <p>{amount.context}</p>
-                      <blockquote className="source-evidence">
-                        {amount.evidence}
-                      </blockquote>
-                      <span className="source-badge">
-                        Strona {amount.sourcePage} ·{' '}
-                        {amount.extractionMethod === 'ocr' ? 'OCR' : 'PDF.js'}
-                      </span>
-                    </article>
-                  ))}
-                </div>
+                <details className="analysis-detail-section">
+                  <summary>Kwoty i źródła ({analysis.amounts.length})</summary>
+                  <div className="fact-list">
+                    {analysis.amounts.map((amount, index) => (
+                      <article
+                        className="fact-card"
+                        key={`${amount.value}-${amount.context}-${index}`}
+                      >
+                        <strong>
+                          {amount.value.toLocaleString('pl-PL')}{' '}
+                          {amount.currency}
+                        </strong>
+                        <p>{amount.context}</p>
+                        <blockquote className="source-evidence">
+                          {amount.evidence}
+                        </blockquote>
+                        <span className="source-badge">
+                          Strona {amount.sourcePage} ·{' '}
+                          {amount.extractionMethod === 'ocr' ? 'OCR' : 'PDF.js'}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                </details>
 
-                <h3>Fakty z dokumentu</h3>
-                <div className="fact-list">
-                  {analysis.sourceFacts.map((fact, index) => (
-                    <article
-                      className="fact-card"
-                      key={`${fact.pageNumber}-${fact.fact}-${index}`}
-                    >
-                      <p>{fact.fact}</p>
-                      <blockquote className="source-evidence">
-                        {fact.evidence}
-                      </blockquote>
-                      <span className="source-badge">
-                        Strona {fact.pageNumber} ·{' '}
-                        {fact.extractionMethod === 'ocr' ? 'OCR' : 'PDF.js'}
-                      </span>
-                    </article>
-                  ))}
-                </div>
+                <details className="analysis-detail-section">
+                  <summary>
+                    Fakty z dokumentu ({analysis.sourceFacts.length})
+                  </summary>
+                  <div className="fact-list">
+                    {analysis.sourceFacts.map((fact, index) => (
+                      <article
+                        className="fact-card"
+                        key={`${fact.pageNumber}-${fact.fact}-${index}`}
+                      >
+                        <p>{fact.fact}</p>
+                        <blockquote className="source-evidence">
+                          {fact.evidence}
+                        </blockquote>
+                        <span className="source-badge">
+                          Strona {fact.pageNumber} ·{' '}
+                          {fact.extractionMethod === 'ocr' ? 'OCR' : 'PDF.js'}
+                        </span>
+                      </article>
+                    ))}
+                  </div>
+                </details>
 
                 {analysis.userCountChanges.length > 0 && (
                   <>
@@ -656,7 +690,7 @@ function HomePage() {
                 </div>
               </section>
             )}
-            {import.meta.env.DEV && (
+            {import.meta.env.DEV && diagnosticsEnabled() && (
               <details className="extracted-text pdf-diagnostics">
                 <summary>
                   PDF.js raw extraction diagnostics (development only)
@@ -911,6 +945,65 @@ function HomePage() {
           onChange={handleFileChange}
         />
       </section>
+
+      {!result && analysisPopup && (
+        <div
+          className="analysis-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAnalysisPopup(null)
+          }}
+        >
+          <section
+            className="analysis-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-analysis-modal-title"
+          >
+            <div className="analysis-modal-heading">
+              <div>
+                <span className="result-kicker">WYNIK ANALIZY</span>
+                <h2 id="history-analysis-modal-title">
+                  {analysisPopup.document.title ||
+                    analysisPopup.document.fileName}
+                </h2>
+                <p>
+                  {analysisPopup.document.fileName} ·{' '}
+                  {analysisPopup.document.type}
+                </p>
+              </div>
+              <button
+                className="modal-close"
+                type="button"
+                aria-label="Zamknij wynik analizy"
+                onClick={() => setAnalysisPopup(null)}
+              >
+                ×
+              </button>
+            </div>
+            <p className="analysis-summary">{analysisPopup.summary}</p>
+            <h3>Najważniejsze ustalenia</h3>
+            <ul className="key-points">
+              {analysisPopup.keyPoints.map((point) => (
+                <li key={point}>{point}</li>
+              ))}
+            </ul>
+            <div className="json-result-tools modal-tools">
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => downloadAnalysisJson(analysisPopup)}
+              >
+                Pobierz JSON
+              </button>
+              <details className="json-preview">
+                <summary>Podgląd JSON</summary>
+                <pre>{JSON.stringify(analysisPopup, null, 2)}</pre>
+              </details>
+            </div>
+          </section>
+        </div>
+      )}
 
       {error && (
         <div className="error-message" role="alert">

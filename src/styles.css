@@ -365,6 +365,30 @@ h1 span {
   color: #344f73;
   font-size: 14px;
 }
+.analysis-detail-section {
+  margin-top: 20px;
+  border-top: 1px solid #e8edf4;
+}
+.analysis-detail-section > summary {
+  padding: 12px 0 8px;
+  color: #344f73;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.analysis-detail-section > summary::-webkit-details-marker {
+  display: none;
+}
+.analysis-detail-section > summary::after {
+  content: '▸';
+  float: right;
+  color: #6b7d95;
+  transition: transform 120ms ease;
+}
+.analysis-detail-section[open] > summary::after {
+  transform: rotate(90deg);
+}
 .analysis-history {
   margin: 22px 0 0;
   padding: 16px;
@@ -735,6 +759,13 @@ h1 span {
     BlinkMacSystemFont,
     'Segoe UI',
     sans-serif;
+}
+.document-error-highlight {
+  background: #ffe0e0;
+  color: #b42318;
+  outline: 1px solid #e57373;
+  border-radius: 3px;
+  padding: 0 2px;
 }
 .structured-page.is-highlighted .markdown-document-text {
   border-color: #2874d0;

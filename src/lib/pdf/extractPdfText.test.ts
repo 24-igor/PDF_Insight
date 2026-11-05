@@ -28,12 +28,9 @@ describe('hasInsufficientText', () => {
 })
 
 describe('getPagesToProcess', () => {
-  it('processes all pages when a PDF is within the temporary limit', () => {
+  it('processes all pages in full-document mode', () => {
     expect(getPagesToProcess(4)).toBe(4)
-  })
-
-  it('caps extraction at four pages for longer PDFs', () => {
-    expect(getPagesToProcess(12)).toBe(4)
+    expect(getPagesToProcess(12)).toBe(12)
   })
 })
 

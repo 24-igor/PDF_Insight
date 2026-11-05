@@ -129,7 +129,7 @@ export type ExtractedPdf = {
   fileName: string
   pageCount: number
   analyzedPageCount?: number
-  analysisPageLimit?: number
+  analysisPageLimit?: number | null
   pages: PdfPageText[]
   emptyPageNumbers: number[]
   failedPageNumbers: number[]

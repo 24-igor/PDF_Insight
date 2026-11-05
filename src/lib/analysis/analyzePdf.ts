@@ -9,7 +9,9 @@ export function selectAnalysisPages(extracted: ExtractedPdf) {
     ANALYSIS_SCOPE === 'first-page'
       ? extracted.pages.slice(0, 1)
       : extracted.pages
-  return scopedPages.slice(0, ANALYSIS_PAGE_LIMIT)
+  return ANALYSIS_PAGE_LIMIT === null
+    ? scopedPages
+    : scopedPages.slice(0, ANALYSIS_PAGE_LIMIT)
 }
 
 export function buildAnalyzeRequest(extracted: ExtractedPdf) {

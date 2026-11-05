@@ -31,7 +31,9 @@ export function hasInsufficientText(text: string): boolean {
 }
 
 export function getPagesToProcess(totalPages: number): number {
-  return Math.min(totalPages, ANALYSIS_PAGE_LIMIT)
+  return ANALYSIS_PAGE_LIMIT === null
+    ? totalPages
+    : Math.min(totalPages, ANALYSIS_PAGE_LIMIT)
 }
 
 const PAGE_VISIBILITY_MARGIN = 0.5
