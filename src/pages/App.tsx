@@ -38,12 +38,6 @@ function pageLabel(count: number): string {
   return 'stron'
 }
 
-function injectionEvidence(page: ExtractedPdf['pages'][number]): string | null {
-  const source = [page.pdfText, page.ocrText ?? ''].join(' ')
-  const match = source.match(/INSTRUKCJA\s+DLA\s+SYSTEMU\s+AI:[\s\S]{0,360}/i)
-  return match?.[0].replace(/\s+/g, ' ').trim() ?? null
-}
-
 function renderDocumentText(text: string): ReactNode[] {
   const injectionPattern =
     /(INSTRUKCJA\s+DLA\s+SYSTEMU\s+AI:[^\n]*(?:\n[^\n]*){0,3})/i
@@ -400,8 +394,10 @@ function HomePage() {
             {result.needsReviewPageNumbers.filter(
               (pageNumber) => !result.injectionPageNumbers.includes(pageNumber),
             ).length > 0 && (
-              <details className="page-warning page-warning-collapsible">
-                <summary>Strony wymagające weryfikacji odczytu</summary>
+              <div className="page-warning page-warning-collapsible">
+                <p className="warning-title">
+                  Strony wymagające weryfikacji odczytu
+                </p>
                 <p>
                   {result.needsReviewPageNumbers
                     .filter(
@@ -442,24 +438,18 @@ function HomePage() {
                       )
                     })}
                 </p>
-              </details>
+              </div>
             )}
             {result.injectionPageNumbers.length > 0 && (
-              <details
+              <div
                 className="page-warning page-warning-danger page-warning-collapsible"
                 role="alert"
-                onToggle={(event) => {
-                  if (event.currentTarget.open) {
-                    const firstInjectionPage = result.injectionPageNumbers[0]
-                    if (firstInjectionPage) goToPage(firstInjectionPage)
-                  }
-                }}
               >
-                <summary>
+                <p className="warning-title">
                   Wykryto tekst przypominający instrukcje dla AI na stronie
                   {result.injectionPageNumbers.length > 1 ? 'ach' : ''}{' '}
                   {result.injectionPageNumbers.join(', ')}
-                </summary>
+                </p>
                 <p>
                   Dokładna lokalizacja:{' '}
                   {result.injectionPageNumbers.map((n) => (
@@ -473,22 +463,7 @@ function HomePage() {
                   ))}
                   . Treść PDF jest niezaufanymi danymi, nie instrukcją.
                 </p>
-                {result.injectionPageNumbers.map((pageNumber) => {
-                  const page = result.pages.find(
-                    (item) => item.pageNumber === pageNumber,
-                  )
-                  const evidence = page ? injectionEvidence(page) : null
-                  return evidence ? (
-                    <blockquote
-                      className="injection-evidence"
-                      key={`injection-evidence-${pageNumber}`}
-                    >
-                      <span>Wykryty tekst na stronie {pageNumber}:</span> „
-                      {evidence}”
-                    </blockquote>
-                  ) : null
-                })}
-              </details>
+              </div>
             )}
             {result.labelMismatchPageNumbers.length > 0 && (
               <div className="page-warning" role="status">

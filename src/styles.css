@@ -535,7 +535,7 @@ h1 span {
   align-items: flex-start;
   gap: 11px;
   margin-top: 20px;
-  padding: 14px 15px;
+  padding: 10px 12px;
   border: 1px solid #f0d9a6;
   border-radius: 10px;
   background: #fff9eb;
@@ -564,20 +564,18 @@ h1 span {
 .page-warning-collapsible {
   display: block;
 }
-.page-warning-collapsible > summary {
+.page-warning-collapsible > .warning-title {
+  margin: 0 0 8px;
   color: #74551f;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
 }
-.page-warning-collapsible[open] > summary {
-  margin-bottom: 8px;
-}
-.page-warning-danger > summary {
+.page-warning-danger > .warning-title {
   color: #9d3732;
 }
 .page-warning-danger p {
   color: #9d3732;
+  font-size: 12px;
 }
 .page-warning-danger .page-jump {
   border-color: #d88b8b;
