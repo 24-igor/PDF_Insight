@@ -51,7 +51,7 @@ export const AnalysisResultValidator = z.object({
       evidence: z.string().min(8),
       sourcePage: z.number().int().min(1),
       extractionMethod: z.enum(['pdfjs', 'ocr']),
-      evidenceStatus: z.enum(['verified', 'unverified']).optional(),
+      evidenceStatus: z.enum(['verified', 'unverified', 'derived']).optional(),
     }),
   ),
   dates: z.array(
@@ -159,6 +159,10 @@ export const ANALYSIS_JSON_SCHEMA = {
           evidence: { type: 'string', minLength: 8 },
           sourcePage: { type: 'integer', minimum: 1 },
           extractionMethod: { type: 'string', enum: ['pdfjs', 'ocr'] },
+          evidenceStatus: {
+            type: 'string',
+            enum: ['verified', 'unverified', 'derived'],
+          },
         },
       },
     },

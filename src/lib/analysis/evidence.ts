@@ -25,3 +25,10 @@ export function evidenceSupportsNumbers(
   const evidenceNumbers = new Set(numericValues(evidence))
   return numericValues(statement).every((number) => evidenceNumbers.has(number))
 }
+
+export function calculatePercentageAmount(
+  baseAmount: number,
+  percentage: number,
+): number {
+  return Math.round(((baseAmount * percentage) / 100) * 100) / 100
+}

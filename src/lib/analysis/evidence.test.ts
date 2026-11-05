@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { evidenceSupportsNumbers, numericValues } from './evidence'
+import {
+  calculatePercentageAmount,
+  evidenceSupportsNumbers,
+  numericValues,
+} from './evidence'
 
 describe('numeric evidence matching', () => {
   it('does not validate a currency amount from a percentage alone', () => {
@@ -17,5 +21,15 @@ describe('numeric evidence matching', () => {
 
   it('does not accept substring matches', () => {
     expect(evidenceSupportsNumbers('300 PLN', '3000 PLN')).toBe(false)
+  })
+
+  it('calculates a percentage amount deterministically without treating it as source text', () => {
+    expect(calculatePercentageAmount(184500, 30)).toBe(55350)
+    expect(
+      evidenceSupportsNumbers(
+        '55350 PLN',
+        'Zamawiający zapłaci zaliczkę w wysokości 30% wynagrodzenia za wdrożenie',
+      ),
+    ).toBe(false)
   })
 })
