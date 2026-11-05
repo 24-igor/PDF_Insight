@@ -5,6 +5,7 @@ import {
   type AnalyzeRequest,
 } from './schema'
 import { evidenceSupportsNumbers } from '../../src/lib/analysis/evidence'
+import { detectLanguage } from '../../src/lib/analysis/detectLanguage'
 
 type Env = Cloudflare.Env
 
@@ -121,11 +122,13 @@ async function requestAnalysis(
         `\n${page.text}`,
     )
     .join('\n\n')
+  const detectedLanguage = detectLanguage(inputText)
   const documentPageCount =
     requestData.documentPageCount ?? requestData.pageCount
+  const languageDirective = `Język dokumentu: ${detectedLanguage} (ISO 639-1). Odpowiadaj wyłącznie w tym języku. Nie używaj innych języków w podsumowaniu, kluczowych punktach ani polu document.language. document.language musi wynosić "${detectedLanguage}".\n\n`
   const instructions = retry
-    ? `${SYSTEM_INSTRUCTIONS}\nPoprzedni wynik nie przeszedł walidacji. Wygeneruj poprawny wynik od nowa.`
-    : SYSTEM_INSTRUCTIONS
+    ? `${languageDirective}${SYSTEM_INSTRUCTIONS}\nPoprzedni wynik nie przeszedł walidacji. Wygeneruj poprawny wynik od nowa.`
+    : `${languageDirective}${SYSTEM_INSTRUCTIONS}`
 
   let response: Response
   try {
@@ -306,6 +309,7 @@ async function requestAnalysis(
   }
   const groundedResult = {
     ...result.data,
+    document: { ...result.data.document, language: detectedLanguage },
     amounts: result.data.amounts.map((item) => ({
       ...attachEvidenceSource(item),
       evidenceStatus:
